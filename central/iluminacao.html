@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Iluminação • G MÁQUINA</title>
+  <link rel="stylesheet" href="css/theme.css"/>
+
+  <style>
+    .span-12{grid-column:span 12}
+    .span-8{grid-column:span 8}
+    .span-6{grid-column:span 6}
+    .span-4{grid-column:span 4}
+
+    .titleRow{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap}
+    .titleRow h3{margin:0}
+
+    .sectors{
+      display:grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap:12px;
+      margin-top:12px;
+    }
+    .sector{
+      grid-column: span 6;
+      border-radius: var(--radius);
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.18);
+      padding:12px;
+      position:relative;
+      overflow:hidden;
+    }
+    .sector:before{
+      content:"";
+      position:absolute; inset:-90px;
+      background: radial-gradient(420px 200px at 85% 35%, rgba(85,214,190,.12), transparent 60%);
+      pointer-events:none;
+    }
+    .sector > *{position:relative}
+    .secTop{display:flex; align-items:center; justify-content:space-between; gap:10px}
+    .secName{font-weight:950}
+    .secState{
+      font-size:12px; padding:6px 10px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.14); background: rgba(0,0,0,.22)
+    }
+    .secState.on{border-color: rgba(46,229,157,.45); background: rgba(46,229,157,.10)}
+    .secState.off{border-color: rgba(255,255,255,.12); background: rgba(255,255,255,.04)}
+
+    .row{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px}
+    .chip{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:6px 10px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.22);
+      font-size:12px;
+    }
+
+    .switch{
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      padding:12px;
+      border-radius: var(--radius);
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.18);
+      margin-top:12px;
+    }
+    .toggle{
+      width:54px; height:30px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      position:relative; cursor:pointer;
+      transition:.18s ease;
+    }
+    .toggle i{
+      position:absolute; top:50%; transform:translateY(-50%);
+      left:4px; width:22px; height:22px; border-radius:999px;
+      background: rgba(255,255,255,.85);
+      transition:.18s ease;
+    }
+    .toggle.on{border-color: rgba(85,214,190,.55); background: rgba(85,214,190,.14)}
+    .toggle.on i{left:28px; background: rgba(46,229,157,.95)}
+
+    .log{
+      margin-top:12px;
+      border-radius: var(--radius);
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.16);
+      overflow:hidden;
+    }
+    .logItem{
+      padding:10px 12px;
+      display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;
+      border-top:1px solid rgba(255,255,255,.08);
+      font-size:13px;
+    }
+    .logItem:first-child{border-top:none}
+    .time{color:var(--muted)}
+
+    .sliderRow{margin-top:12px; display:grid; gap:10px}
+    .range{
+      width:100%;
+      accent-color: var(--brand2);
+    }
+
+    @media (max-width: 980px){
+      .span-8,.span-6,.span-4{grid-column:span 12}
+      .sector{grid-column:span 12}
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <img src="assets/logo-gmaquina.png" alt="G MÁQUINA">
+        <div>
+          <div class="t1">G MÁQUINA • Iluminação</div>
+          <div class="t2">Setores • cenas • automação</div>
+        </div>
+      </div>
+
+      <div class="nav">
+        <a href="index.html">Central</a>
+        <a href="irrigacao.html">Irrigação</a>
+        <a href="seguranca.html">Segurança</a>
+        <a class="active" href="iluminacao.html">Iluminação</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <section class="hero">
+      <h1 class="h-title">Iluminação & Cenas</h1>
+      <p class="h-sub">
+        Controle por setores, cenas prontas (chegada/noite/segurança) e timer.
+        Hoje simulado — depois liga no ESP32 de iluminação.
+      </p>
+      <div class="badges">
+        <div class="badge"><span class="dot warn"></span><span>Modo: Simulação</span></div>
+        <div class="badge"><span class="dot"></span><span>Módulo: Online</span></div>
+        <div class="badge"><span class="dot"></span><span>Automação disponível</span></div>
+      </div>
+    </section>
+
+    <section class="grid">
+
+      <!-- STATUS -->
+      <div class="card span-8">
+        <div class="titleRow">
+          <h3>💡 Status do Sistema</h3>
+          <span class="pill" id="pill">Pronto</span>
+        </div>
+
+        <div class="kpis">
+          <div class="kpi">Setores ligados: <b id="onCount">0</b></div>
+          <div class="kpi">Cena ativa: <b id="scene">—</b></div>
+          <div class="kpi">Timer: <b id="timerKpi">OFF</b></div>
+        </div>
+
+        <div class="row">
+          <button class="btn primary" id="allOn">Ligar tudo</button>
+          <button class="btn danger" id="allOff">Desligar tudo</button>
+          <button class="btn" id="clearScene">Limpar cena</button>
+        </div>
+
+        <div class="switch">
+          <div>
+            <div style="font-weight:950">Automático por presença</div>
+            <div class="small">Se detectar movimento à noite, liga corredor/varanda (simulado)</div>
+          </div>
+          <div class="toggle" id="auto"><i></i></div>
+        </div>
+
+        <div class="sliderRow">
+          <div class="small">Brilho global (simulação)</div>
+          <input class="range" id="bright" type="range" min="0" max="100" value="70">
+          <div class="chip">🔆 Brilho: <b id="brightVal">70%</b></div>
+        </div>
+      </div>
+
+      <!-- CENAS -->
+      <div class="card span-4">
+        <div class="titleRow">
+          <h3>🎬 Cenas</h3>
+          <span class="pill">1 clique</span>
+        </div>
+        <p class="small" style="margin-top:8px">Cenas típicas de chácara. Dá pra criar quantas quiser.</p>
+
+        <div class="row">
+          <button class="btn primary" data-scene="chegada">Chegada</button>
+          <button class="btn" data-scene="noite">Noite</button>
+          <button class="btn" data-scene="seguranca">Segurança</button>
+        </div>
+
+        <hr class="sep">
+
+        <div class="titleRow">
+          <h3 style="font-size:16px">⏱️ Timer</h3>
+          <span class="pill" id="timerPill">OFF</span>
+        </div>
+
+        <div style="margin-top:10px; display:grid; gap:10px">
+          <input class="input" id="min" type="number" min="1" max="120" value="10" placeholder="Minutos">
+          <button class="btn" id="startTimer">Ativar timer</button>
+          <button class="btn ghost" id="stopTimer">Parar timer</button>
+        </div>
+      </div>
+
+      <!-- SETORES -->
+      <div class="card span-12">
+        <div class="titleRow">
+          <h3>🏷️ Setores</h3>
+          <span class="pill"><span id="sCount">6</span> setores</span>
+        </div>
+        <p class="small" style="margin-top:8px">Cada setor vira um relé/canal no ESP32 de iluminação.</p>
+
+        <div class="sectors" id="sectors"></div>
+      </div>
+
+      <!-- LOG -->
+      <div class="card span-12">
+        <div class="titleRow">
+          <h3>🧾 Log</h3>
+          <span class="pill">Ativo</span>
+        </div>
+
+        <div class="log" id="log"></div>
+
+        <div class="row">
+          <button class="btn" id="clearLog">Limpar log</button>
+          <a class="btn ghost" href="index.html">⬅ Voltar</a>
+        </div>
+      </div>
+
+    </section>
+
+    <div class="small" style="margin-top:18px; opacity:.85">
+      Próximo bloco: “conectar nos ESP32 de verdade” (API /api/status e /api/control).
+    </div>
+
+  </div>
+
+<script>
+  const state = {
+    auto:false,
+    brightness:70,
+    scene:null,
+    timer:null,
+    sectors:[
+      {id:1, icon:"🏠", name:"Varanda", on:false},
+      {id:2, icon:"🌿", name:"Jardim", on:false},
+      {id:3, icon:"🚪", name:"Entrada", on:false},
+      {id:4, icon:"🛣️", name:"Corredor", on:false},
+      {id:5, icon:"🚜", name:"Galpão", on:false},
+      {id:6, icon:"🔦", name:"Refletores", on:false},
+    ]
+  };
+
+  const sectorsEl = document.getElementById("sectors");
+  const logEl = document.getElementById("log");
+
+  const onCountEl = document.getElementById("onCount");
+  const sceneEl = document.getElementById("scene");
+  const timerKpi = document.getElementById("timerKpi");
+  const timerPill = document.getElementById("timerPill");
+
+  const autoToggle = document.getElementById("auto");
+  const bright = document.getElementById("bright");
+  const brightVal = document.getElementById("brightVal");
+
+  document.getElementById("sCount").textContent = state.sectors.length;
+
+  function nowStr(){
+    const d=new Date();
+    return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+  }
+  function pushLog(msg){
+    const item=document.createElement("div");
+    item.className="logItem";
+    item.innerHTML=`<div>${msg}</div><div class="time">${nowStr()}</div>`;
+    logEl.prepend(item);
+    if(logEl.children.length>40) logEl.removeChild(logEl.lastChild);
+  }
+
+  function renderKPIs(){
+    const onCount = state.sectors.filter(s=>s.on).length;
+    onCountEl.textContent = onCount;
+    sceneEl.textContent = state.scene ? state.scene.toUpperCase() : "—";
+    timerKpi.textContent = state.timer ? "ON" : "OFF";
+    timerPill.textContent = state.timer ? "ON" : "OFF";
+    autoToggle.classList.toggle("on", state.auto);
+    brightVal.textContent = state.brightness + "%";
+  }
+
+  function sectorCard(s){
+    const st = s.on ? "on" : "off";
+    const txt = s.on ? "LIGADO" : "DESLIGADO";
+    return `
+      <div class="sector" data-id="${s.id}">
+        <div class="secTop">
+          <div class="secName">${s.icon} ${s.name}</div>
+          <div class="secState ${st}">${txt}</div>
+        </div>
+        <div class="row">
+          <button class="btn primary" data-act="on">Ligar</button>
+          <button class="btn danger" data-act="off">Desligar</button>
+          <button class="btn" data-act="pulse">Pulso 20s</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderSectors(){
+    sectorsEl.innerHTML = state.sectors.map(sectorCard).join("");
+  }
+
+  function setAll(v){
+    state.sectors.forEach(s=>s.on=v);
+    pushLog(v ? "✅ Ação global: <b>LIGAR TUDO</b>" : "🧯 Ação global: <b>DESLIGAR TUDO</b>");
+    renderSectors(); renderKPIs();
+  }
+
+  function applyScene(name){
+    state.scene = name;
+    // Cenas:
+    // chegada: entrada+varanda+corredor+refletores
+    // noite: varanda+corredor+jardim
+    // seguranca: refletores + entrada
+    const map = {
+      chegada: [3,1,4,6],
+      noite: [1,4,2],
+      seguranca: [6,3]
+    };
+    const onIds = map[name] || [];
+    state.sectors.forEach(s=> s.on = onIds.includes(s.id));
+    pushLog(`🎬 Cena aplicada: <b>${name.toUpperCase()}</b>`);
+    renderSectors(); renderKPIs();
+  }
+
+  // Botões globais
+  document.getElementById("allOn").onclick = ()=>setAll(true);
+  document.getElementById("allOff").onclick = ()=>setAll(false);
+  document.getElementById("clearScene").onclick = ()=>{
+    state.scene=null;
+    pushLog("🧹 Cena limpa.");
+    renderKPIs();
+  };
+
+  // Toggle auto
+  autoToggle.onclick = ()=>{
+    state.auto = !state.auto;
+    pushLog(state.auto ? "🤖 Automático por presença <b>ATIVADO</b>." : "🧍 Automático por presença <b>DESATIVADO</b>.");
+    renderKPIs();
+  };
+
+  // Brilho
+  bright.oninput = ()=>{
+    state.brightness = Number(bright.value);
+    renderKPIs();
+  };
+
+  // Cenas
+  document.querySelectorAll("button[data-scene]").forEach(btn=>{
+    btn.onclick = ()=> applyScene(btn.dataset.scene);
+  });
+
+  // Timer
+  let timerHandle = null;
+  document.getElementById("startTimer").onclick = ()=>{
+    const minutes = Math.max(1, Math.min(120, Number(document.getElementById("min").value || 10)));
+    pushLog(`⏱️ Timer ligado: <b>${minutes} min</b> (depois desliga tudo).`);
+    if(timerHandle) clearTimeout(timerHandle);
+    state.timer = Date.now() + minutes*60*1000;
+    renderKPIs();
+    timerHandle = setTimeout(()=>{
+      setAll(false);
+      state.timer = null;
+      renderKPIs();
+      pushLog("⏱️ Timer concluído: sistema desligou tudo.");
+    }, 2500); // simulação rápida (2.5s)
+  };
+  document.getElementById("stopTimer").onclick = ()=>{
+    if(timerHandle) clearTimeout(timerHandle);
+    timerHandle = null;
+    state.timer = null;
+    pushLog("⏱️ Timer parado.");
+    renderKPIs();
+  };
+
+  // Ações por setor
+  sectorsEl.addEventListener("click", (ev)=>{
+    const btn = ev.target.closest("button[data-act]");
+    if(!btn) return;
+    const wrap = ev.target.closest(".sector");
+    const id = Number(wrap.dataset.id);
+    const s = state.sectors.find(x=>x.id===id);
+    const act = btn.dataset.act;
+
+    if(act==="on"){ s.on=true; pushLog(`💡 ${s.name}: <b>LIGAR</b>`); }
+    if(act==="off"){ s.on=false; pushLog(`💡 ${s.name}: <b>DESLIGAR</b>`); }
+    if(act==="pulse"){
+      pushLog(`💡 ${s.name}: <b>PULSO 20s</b>`);
+      s.on=true; renderSectors(); renderKPIs();
+      setTimeout(()=>{ s.on=false; renderSectors(); renderKPIs(); pushLog(`💡 ${s.name}: pulso concluído.`); }, 1200);
+      return;
+    }
+
+    renderSectors(); renderKPIs();
+  });
+
+  // Log
+  document.getElementById("clearLog").onclick = ()=>{
+    logEl.innerHTML="";
+    pushLog("Log limpo.");
+  };
+
+  // Simulação: presença à noite
+  setInterval(()=>{
+    if(!state.auto) return;
+    // chance pequena de presença
+    if(Math.random() < 0.22){
+      pushLog("👣 Presença detectada (simulação).");
+      // liga corredor+varanda por 2s
+      const ids = [4,1];
+      state.sectors.forEach(s=>{
+        if(ids.includes(s.id)) s.on = true;
+      });
+      renderSectors(); renderKPIs();
+      setTimeout(()=>{
+        state.sectors.forEach(s=>{
+          if(ids.includes(s.id) && !state.scene) s.on = false;
+        });
+        renderSectors(); renderKPIs();
+        pushLog("✅ Ação automática finalizada.");
+      }, 2200);
+    }
+  }, 5000);
+
+  // init
+  renderSectors();
+  renderKPIs();
+  pushLog("Painel de iluminação iniciado (simulação).");
+</script>
+</body>
+</html>

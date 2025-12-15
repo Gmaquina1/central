@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Irrigação • G MÁQUINA</title>
+  <link rel="stylesheet" href="css/theme.css"/>
+
+  <style>
+    .span-12{grid-column:span 12}
+    .span-8{grid-column:span 8}
+    .span-6{grid-column:span 6}
+    .span-4{grid-column:span 4}
+
+    .titleRow{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap}
+    .titleRow h3{margin:0}
+    .muted{color:var(--muted)}
+
+    .zones{
+      display:grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap:12px;
+      margin-top:12px;
+    }
+    .zone{
+      grid-column: span 6;
+      border-radius: var(--radius);
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.18);
+      padding:12px;
+      position:relative;
+      overflow:hidden;
+    }
+    .zone:before{
+      content:"";
+      position:absolute; inset:-90px;
+      background: radial-gradient(420px 200px at 85% 35%, rgba(85,214,190,.10), transparent 60%);
+      pointer-events:none;
+    }
+    .zone > *{position:relative}
+    .zoneTop{display:flex; align-items:center; justify-content:space-between; gap:10px}
+    .zoneName{font-weight:900}
+    .zoneState{font-size:12px; padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.14); background: rgba(0,0,0,.22)}
+    .zoneState.on{border-color: rgba(46,229,157,.45); background: rgba(46,229,157,.10)}
+    .zoneState.off{border-color: rgba(255,255,255,.12); background: rgba(255,255,255,.04)}
+    .zoneActions{display:flex; gap:10px; flex-wrap:wrap; margin-top:10px}
+
+    .sensorGrid{display:grid; grid-template-columns: repeat(12, 1fr); gap:12px; margin-top:12px}
+    .sensor{
+      grid-column: span 6;
+      border-radius: var(--radius);
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.18);
+      padding:12px;
+    }
+    .sensorHead{display:flex; align-items:center; justify-content:space-between; gap:10px}
+    .sensorVal{font-size:26px; font-weight:950; margin-top:8px}
+    .bar{
+      height:10px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      overflow:hidden;
+      margin-top:10px;
+    }
+    .bar > i{
+      display:block; height:100%;
+      width:50%;
+      background: linear-gradient(90deg, rgba(85,214,190,.65), rgba(230,184,76,.70));
+    }
+
+    .log{
+      margin-top:12px;
+      border-radius: var(--radius);
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.16);
+      overflow:hidden;
+    }
+    .logItem{
+      padding:10px 12px;
+      display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;
+      border-top:1px solid rgba(255,255,255,.08);
+      font-size:13px;
+    }
+    .logItem:first-child{border-top:none}
+    .time{color:var(--muted)}
+    .chip{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:6px 10px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.22);
+      font-size:12px;
+    }
+    @media (max-width: 980px){
+      .span-8,.span-6,.span-4{grid-column:span 12}
+      .zone{grid-column:span 12}
+      .sensor{grid-column:span 12}
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <img src="assets/logo-gmaquina.png" alt="G MÁQUINA">
+        <div>
+          <div class="t1">G MÁQUINA • Irrigação</div>
+          <div class="t2">Painel dedicado • pronto p/ sensores</div>
+        </div>
+      </div>
+
+      <div class="nav">
+        <a href="index.html">Central</a>
+        <a class="active" href="irrigacao.html">Irrigação</a>
+        <a href="seguranca.html">Segurança</a>
+        <a href="iluminacao.html">Iluminação</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <section class="hero">
+      <h1 class="h-title">Irrigação Inteligente</h1>
+      <p class="h-sub">
+        Controle por zonas + monitoramento de <b>umidade</b> e <b>pressão</b>.
+        Hoje em simulação. Depois a gente liga direto no ESP32.
+      </p>
+      <div class="badges">
+        <div class="badge" id="b1"><span class="dot warn"></span><span>Modo: Simulação</span></div>
+        <div class="badge" id="b2"><span class="dot"></span><span>Módulo: Online</span></div>
+        <div class="badge"><span class="dot"></span><span>Fail-safe (independente)</span></div>
+      </div>
+    </section>
+
+    <section class="grid">
+
+      <!-- STATUS -->
+      <div class="card span-8">
+        <div class="titleRow">
+          <h3>📡 Status do Módulo</h3>
+          <span class="pill" id="pill">Simulação</span>
+        </div>
+        <p class="muted" style="margin-top:8px">Resumo do estado atual do sistema de irrigação.</p>
+
+        <div class="kpis">
+          <div class="kpi">Modo: <b id="mode">AUTO</b></div>
+          <div class="kpi">Zonas ativas: <b id="zonesOn">0</b></div>
+          <div class="kpi">Pressão: <b id="pressKpi">—</b></div>
+          <div class="kpi">Umidade: <b id="humKpi">—</b></div>
+        </div>
+
+        <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap">
+          <button class="btn primary" id="allOn">Ligar tudo</button>
+          <button class="btn danger" id="allOff">Desligar tudo</button>
+          <button class="btn" id="auto">Modo AUTO</button>
+          <button class="btn ghost" id="manual">Modo MANUAL</button>
+        </div>
+      </div>
+
+      <!-- AGENDA (simulação) -->
+      <div class="card span-4">
+        <div class="titleRow">
+          <h3>🗓️ Agenda</h3>
+          <span class="pill">Simulação</span>
+        </div>
+        <p class="muted" style="margin-top:8px">Depois vamos ligar com horários reais e dias da semana.</p>
+
+        <div style="margin-top:12px; display:grid; gap:10px">
+          <div class="chip">⏱️ 06:00 • Zona 1 • 10 min</div>
+          <div class="chip">⏱️ 16:30 • Zona 2 • 12 min</div>
+          <div class="chip">⏱️ 19:10 • Zona 3 • 08 min</div>
+        </div>
+
+        <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap">
+          <button class="btn" id="simRun">Rodar agenda agora</button>
+        </div>
+      </div>
+
+      <!-- ZONAS -->
+      <div class="card span-12">
+        <div class="titleRow">
+          <h3>💧 Zonas</h3>
+          <span class="pill"><span id="zCount">4</span> zonas</span>
+        </div>
+        <p class="muted" style="margin-top:8px">Cada zona vira uma válvula/relé no seu ESP32 de irrigação.</p>
+
+        <div class="zones" id="zones"></div>
+      </div>
+
+      <!-- SENSORES -->
+      <div class="card span-6">
+        <div class="titleRow">
+          <h3>🌿 Sensor de Umidade</h3>
+          <span class="pill" id="humState">Normal</span>
+        </div>
+
+        <div class="sensorGrid">
+          <div class="sensor">
+            <div class="sensorHead">
+              <div class="muted">Umidade do solo</div>
+              <div class="chip">Sensor futuro</div>
+            </div>
+            <div class="sensorVal"><span id="humVal">—</span>%</div>
+            <div class="bar"><i id="humBar" style="width:50%"></i></div>
+            <div class="small" style="margin-top:10px">Faixa ideal (configurável): 35% ~ 55%</div>
+          </div>
+
+          <div class="sensor">
+            <div class="sensorHead">
+              <div class="muted">Recomendação</div>
+              <div class="chip">IA local</div>
+            </div>
+            <div class="sensorVal" style="font-size:18px; font-weight:900" id="humHint">—</div>
+            <div class="small" style="margin-top:10px">
+              No futuro, isso pode acionar irrigação automática por limite mínimo.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card span-6">
+        <div class="titleRow">
+          <h3>🧪 Sensor de Pressão</h3>
+          <span class="pill" id="pressState">Normal</span>
+        </div>
+
+        <div class="sensorGrid">
+          <div class="sensor">
+            <div class="sensorHead">
+              <div class="muted">Pressão da linha</div>
+              <div class="chip">Sensor futuro</div>
+            </div>
+            <div class="sensorVal"><span id="pressVal">—</span> bar</div>
+            <div class="bar"><i id="pressBar" style="width:50%"></i></div>
+            <div class="small" style="margin-top:10px">Alerta (configurável): abaixo de 1.2 bar</div>
+          </div>
+
+          <div class="sensor">
+            <div class="sensorHead">
+              <div class="muted">Diagnóstico</div>
+              <div class="chip">Proteção</div>
+            </div>
+            <div class="sensorVal" style="font-size:18px; font-weight:900" id="pressHint">—</div>
+            <div class="small" style="margin-top:10px">
+              No futuro, se cair a pressão, o sistema pode desligar tudo e avisar.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LOG -->
+      <div class="card span-12">
+        <div class="titleRow">
+          <h3>🧾 Log de Eventos</h3>
+          <span class="pill">Tempo real (simulado)</span>
+        </div>
+        <p class="muted" style="margin-top:8px">Tudo que acontecer (liga/desliga/alertas) aparece aqui.</p>
+
+        <div class="log" id="log"></div>
+
+        <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap">
+          <button class="btn" id="clearLog">Limpar log</button>
+          <a class="btn ghost" href="index.html">⬅ Voltar para Central</a>
+        </div>
+      </div>
+
+    </section>
+
+    <div class="small" style="margin-top:18px; opacity:.85">
+      Próximo passo: conectar no ESP32 de irrigação e trocar “simulação” por dados reais.
+    </div>
+
+  </div>
+
+<script>
+  // ======= ESTADO (simulação agora) =======
+  const state = {
+    mode: "AUTO",
+    zones: [
+      { id: 1, name: "Zona 1 • Grama / Jardim", on: false, minutes: 10 },
+      { id: 2, name: "Zona 2 • Microaspersores", on: false, minutes: 12 },
+      { id: 3, name: "Zona 3 • Horta", on: false, minutes: 8 },
+      { id: 4, name: "Zona 4 • Reserva", on: false, minutes: 6 },
+    ],
+    hum: 44,       // %
+    pressure: 1.8  // bar
+  };
+
+  const zonesWrap = document.getElementById("zones");
+  const logEl = document.getElementById("log");
+
+  const modeEl = document.getElementById("mode");
+  const zonesOnEl = document.getElementById("zonesOn");
+  const humKpi = document.getElementById("humKpi");
+  const pressKpi = document.getElementById("pressKpi");
+
+  const humVal = document.getElementById("humVal");
+  const humBar = document.getElementById("humBar");
+  const humState = document.getElementById("humState");
+  const humHint = document.getElementById("humHint");
+
+  const pressVal = document.getElementById("pressVal");
+  const pressBar = document.getElementById("pressBar");
+  const pressState = document.getElementById("pressState");
+  const pressHint = document.getElementById("pressHint");
+
+  document.getElementById("zCount").textContent = state.zones.length;
+
+  function nowStr(){
+    const d = new Date();
+    return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+  }
+  function pushLog(msg){
+    const item = document.createElement("div");
+    item.className = "logItem";
+    item.innerHTML = `<div>${msg}</div><div class="time">${nowStr()}</div>`;
+    logEl.prepend(item);
+    // limite
+    if(logEl.children.length > 30) logEl.removeChild(logEl.lastChild);
+  }
+
+  function zoneCard(z){
+    const onClass = z.on ? "on" : "off";
+    const stateText = z.on ? "ATIVA" : "DESLIGADA";
+    return `
+      <div class="zone" data-zone="${z.id}">
+        <div class="zoneTop">
+          <div class="zoneName">💦 ${z.name}</div>
+          <div class="zoneState ${onClass}">${stateText}</div>
+        </div>
+        <div class="small" style="margin-top:8px">Duração padrão: <b>${z.minutes} min</b></div>
+        <div class="zoneActions">
+          <button class="btn primary" data-action="on">Ligar</button>
+          <button class="btn danger" data-action="off">Desligar</button>
+          <button class="btn" data-action="pulse">Pulso 30s</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderZones(){
+    zonesWrap.innerHTML = state.zones.map(zoneCard).join("");
+  }
+
+  function computeSensors(){
+    // umidade
+    humVal.textContent = state.hum.toFixed(0);
+    humBar.style.width = Math.max(0, Math.min(100, state.hum)) + "%";
+    humKpi.textContent = state.hum.toFixed(0) + "%";
+
+    if(state.hum < 35){
+      humState.textContent = "Baixa";
+      humState.style.borderColor = "rgba(230,184,76,.55)";
+      humState.style.background = "rgba(230,184,76,.12)";
+      humHint.textContent = "Umidade baixa — recomendado irrigar.";
+    } else if(state.hum > 65){
+      humState.textContent = "Alta";
+      humState.style.borderColor = "rgba(85,214,190,.55)";
+      humState.style.background = "rgba(85,214,190,.12)";
+      humHint.textContent = "Umidade alta — evite irrigação.";
+    } else {
+      humState.textContent = "Normal";
+      humState.style.borderColor = "rgba(46,229,157,.45)";
+      humState.style.background = "rgba(46,229,157,.10)";
+      humHint.textContent = "Umidade boa — sistema estável.";
+    }
+
+    // pressão
+    pressVal.textContent = state.pressure.toFixed(2);
+    pressBar.style.width = Math.max(0, Math.min(100, (state.pressure/3)*100)) + "%";
+    pressKpi.textContent = state.pressure.toFixed(2) + " bar";
+
+    if(state.pressure < 1.2){
+      pressState.textContent = "Baixa";
+      pressState.style.borderColor = "rgba(255,77,77,.55)";
+      pressState.style.background = "rgba(255,77,77,.12)";
+      pressHint.textContent = "Pressão baixa — possível vazamento/entupimento/bomba.";
+    } else {
+      pressState.textContent = "Normal";
+      pressState.style.borderColor = "rgba(46,229,157,.45)";
+      pressState.style.background = "rgba(46,229,157,.10)";
+      pressHint.textContent = "Pressão normal — operação segura.";
+    }
+  }
+
+  function renderKPIs(){
+    modeEl.textContent = state.mode;
+    const onCount = state.zones.filter(z=>z.on).length;
+    zonesOnEl.textContent = onCount;
+  }
+
+  function setMode(m){
+    state.mode = m;
+    pushLog(`Modo alterado: <b>${m}</b>`);
+    renderKPIs();
+  }
+
+  // ações globais
+  document.getElementById("allOn").onclick = ()=>{
+    state.zones.forEach(z=>z.on=true);
+    pushLog("Ação global: <b>LIGAR TUDO</b>");
+    renderZones(); renderKPIs();
+  };
+  document.getElementById("allOff").onclick = ()=>{
+    state.zones.forEach(z=>z.on=false);
+    pushLog("Ação global: <b>DESLIGAR TUDO</b>");
+    renderZones(); renderKPIs();
+  };
+  document.getElementById("auto").onclick = ()=>setMode("AUTO");
+  document.getElementById("manual").onclick = ()=>setMode("MANUAL");
+
+  // agenda (simulação)
+  document.getElementById("simRun").onclick = ()=>{
+    pushLog("Agenda: executando rotina simulada...");
+    // liga zona 1 por 2s, depois desliga (só visual)
+    const z1 = state.zones[0];
+    z1.on = true;
+    renderZones(); renderKPIs();
+    setTimeout(()=>{
+      z1.on = false;
+      renderZones(); renderKPIs();
+      pushLog("Agenda: finalizada (simulação).");
+    }, 2000);
+  };
+
+  // ações por zona
+  zonesWrap.addEventListener("click", (ev)=>{
+    const btn = ev.target.closest("button[data-action]");
+    if(!btn) return;
+    const zoneEl = ev.target.closest(".zone");
+    const id = Number(zoneEl.dataset.zone);
+    const z = state.zones.find(x=>x.id===id);
+    const act = btn.dataset.action;
+
+    if(act==="on"){ z.on=true; pushLog(`Zona ${id}: <b>LIGAR</b>`); }
+    if(act==="off"){ z.on=false; pushLog(`Zona ${id}: <b>DESLIGAR</b>`); }
+    if(act==="pulse"){
+      pushLog(`Zona ${id}: <b>PULSO 30s</b>`);
+      z.on=true; renderZones(); renderKPIs();
+      setTimeout(()=>{ z.on=false; renderZones(); renderKPIs(); pushLog(`Zona ${id}: pulso concluído.`); }, 1200);
+      return;
+    }
+
+    renderZones(); renderKPIs();
+  });
+
+  // limpar log
+  document.getElementById("clearLog").onclick = ()=>{
+    logEl.innerHTML = "";
+    pushLog("Log limpo.");
+  };
+
+  // simula sensores variando
+  setInterval(()=>{
+    // umidade cai devagar se zonas off; sobe se alguma zona on
+    const anyOn = state.zones.some(z=>z.on);
+    state.hum += anyOn ? (Math.random()*1.2) : -(Math.random()*0.8);
+    state.hum = Math.max(10, Math.min(90, state.hum));
+
+    // pressão cai se muitas zonas on (simulação)
+    const onCount = state.zones.filter(z=>z.on).length;
+    state.pressure = 2.0 - (onCount*0.25) + (Math.random()*0.10 - 0.05);
+    state.pressure = Math.max(0.6, Math.min(2.6, state.pressure));
+
+    computeSensors();
+    // alerta no log se pressão baixa
+    if(state.pressure < 1.2){
+      pushLog("⚠️ Alerta: <b>Pressão baixa</b> detectada.");
+    }
+  }, 4500);
+
+  // init
+  renderZones();
+  renderKPIs();
+  computeSensors();
+  pushLog("Painel de irrigação iniciado (simulação).");
+</script>
+</body>
+</html>
